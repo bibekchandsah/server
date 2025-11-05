@@ -854,43 +854,64 @@ def start_cloudflare_tunnel():
     try:
         print("🌐 Starting Cloudflare Tunnel...")
         
-        # Start cloudflared process
+        # Create a temporary file to capture the URL
+        import tempfile
+        temp_log = tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.log')
+        temp_log_path = temp_log.name
+        temp_log.close()
+        
+        # Start cloudflared process - redirect output to file to avoid blocking
+        # Use stderr redirection to capture URL without blocking the tunnel
+        log_file = open(temp_log_path, 'w')
         process = subprocess.Popen(
             [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
-            stdout=subprocess.PIPE,
+            stdout=log_file,
             stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         )
         
         ServerConfig.CLOUDFLARE_PROCESS = process
         
-        # Read output to find the URL
+        # Read output from file to find the URL without blocking the tunnel
         import threading
         
         def read_tunnel_output():
             url_pattern = re.compile(r'https://[a-z0-9-]+\.trycloudflare\.com')
-            for line in process.stdout:
-                match = url_pattern.search(line)
-                if match:
-                    ServerConfig.CLOUDFLARE_URL = match.group(0)
-                    print(f"✅ Cloudflare Tunnel active: {ServerConfig.CLOUDFLARE_URL} (for global share)")
-                    
-                    # Try to copy to clipboard
-                    try:
-                        subprocess.run(['clip'], input=ServerConfig.CLOUDFLARE_URL, 
-                                     text=True, check=True, timeout=2)
-                        print("📋 URL copied to clipboard!")
-                    except:
-                        pass
-                    break
+            max_attempts = 30  # Try for 30 seconds
+            attempt = 0
+            
+            while attempt < max_attempts and not ServerConfig.CLOUDFLARE_URL:
+                try:
+                    time.sleep(1)
+                    with open(temp_log_path, 'r') as f:
+                        content = f.read()
+                        match = url_pattern.search(content)
+                        if match:
+                            ServerConfig.CLOUDFLARE_URL = match.group(0)
+                            print(f"✅ Cloudflare Tunnel active: {ServerConfig.CLOUDFLARE_URL}")
+                            
+                            # Try to copy to clipboard
+                            try:
+                                subprocess.run(['clip'], input=ServerConfig.CLOUDFLARE_URL, 
+                                             text=True, check=True, timeout=2)
+                                print("📋 URL copied to clipboard!")
+                            except:
+                                pass
+                            break
+                except:
+                    pass
+                attempt += 1
+            
+            # Clean up temp file after a delay
+            time.sleep(5)
+            try:
+                log_file.close()
+                os.unlink(temp_log_path)
+            except:
+                pass
         
         tunnel_thread = threading.Thread(target=read_tunnel_output, daemon=True)
         tunnel_thread.start()
-        
-        # Wait a bit for tunnel to start
-        time.sleep(2)
         
     except Exception as e:
         print(f"⚠️  Failed to start Cloudflare Tunnel: {e}")
