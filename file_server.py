@@ -294,10 +294,7 @@ def generate_professional_ui(files_info, total_size):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>High-Performance File Server</title>
-        <link rel="apple-touch-icon" sizes="180x180" href="./favicon/apple-touch-icon.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="./favicon/favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="./favicon/favicon-16x16.png">
-        <link rel="manifest" href="./favicon/site.webmanifest">
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -330,9 +327,9 @@ def generate_professional_ui(files_info, total_size):
                 font-size: 16px;
             }
             .config-panel {
-                background: #f8f9fa;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 padding: 20px 30px;
-                border-bottom: 1px solid #dee2e6;
+                border-bottom: 1px solid rgba(102, 126, 234, 0.2);
             }
             .config-grid {
                 display: grid;
@@ -341,14 +338,14 @@ def generate_professional_ui(files_info, total_size):
                 margin-top: 15px;
             }
             .config-item {
-                background: white;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 padding: 15px;
                 border-radius: 8px;
-                border-left: 4px solid #667eea;
+                border-left: 4px solid #8899e3;
             }
             .config-label {
                 font-size: 12px;
-                color: #6c757d;
+                color: #eeeeff;
                 text-transform: uppercase;
                 font-weight: 600;
                 margin-bottom: 5px;
@@ -366,6 +363,7 @@ def generate_professional_ui(files_info, total_size):
                 justify-content: space-around;
                 flex-wrap: wrap;
                 gap: 20px;
+                border-bottom: 1px solid rgba(102, 126, 234, 0.2);
             }
             .stat-item {
                 text-align: center;
@@ -476,6 +474,164 @@ def generate_professional_ui(files_info, total_size):
                 font-weight: 600;
                 margin: 0 3px;
             }
+            
+            /* Mobile Responsive Styles */
+            @media (max-width: 768px) {
+                body {
+                    padding: 10px;
+                }
+                
+                .container {
+                    border-radius: 8px;
+                }
+                
+                .header h1 {
+                    font-size: 24px;
+                }
+                
+                .header p {
+                    font-size: 14px;
+                }
+                
+                .header {
+                    padding: 20px;
+                }
+                
+                .config-panel {
+                    padding: 15px;
+                }
+                
+                .config-grid {
+                    grid-template-columns: 1fr;
+                    gap: 10px;
+                }
+                
+                .config-item {
+                    padding: 12px;
+                }
+                
+                .config-label {
+                    font-size: 11px;
+                }
+                
+                .config-value {
+                    font-size: 16px;
+                }
+                
+                .stats {
+                    padding: 15px;
+                    flex-direction: column;
+                    gap: 15px;
+                }
+                
+                .stat-item {
+                    padding: 10px 0;
+                }
+                
+                .stat-value {
+                    font-size: 24px;
+                }
+                
+                .stat-label {
+                    font-size: 13px;
+                }
+                
+                .content {
+                    padding: 15px;
+                    overflow-x: auto;
+                }
+                
+                table {
+                    display: block;
+                    overflow-x: auto;
+                    white-space: nowrap;
+                    -webkit-overflow-scrolling: touch;
+                }
+                
+                th, td {
+                    padding: 10px 8px;
+                    font-size: 13px;
+                }
+                
+                th {
+                    font-size: 11px;
+                }
+                
+                .file-icon {
+                    font-size: 20px;
+                }
+                
+                .file-link {
+                    font-size: 14px;
+                }
+                
+                .size-cell {
+                    font-size: 13px;
+                }
+                
+                .date-cell {
+                    font-size: 12px;
+                }
+                
+                .download-btn {
+                    padding: 6px 12px;
+                    font-size: 12px;
+                }
+                
+                .footer {
+                    padding: 15px;
+                    font-size: 12px;
+                }
+                
+                .empty-state {
+                    padding: 40px 15px;
+                }
+                
+                .empty-icon {
+                    font-size: 48px;
+                }
+            }
+            
+            /* Extra small devices */
+            @media (max-width: 480px) {
+                .header h1 {
+                    font-size: 20px;
+                }
+                
+                .header p {
+                    font-size: 13px;
+                }
+                
+                .config-value {
+                    font-size: 14px;
+                }
+                
+                .stat-value {
+                    font-size: 20px;
+                }
+                
+                th, td {
+                    padding: 8px 6px;
+                    font-size: 12px;
+                }
+                
+                .file-name {
+                    gap: 5px;
+                }
+                
+                .file-icon {
+                    font-size: 18px;
+                }
+                
+                .file-link {
+                    font-size: 13px;
+                }
+                
+                .download-btn {
+                    padding: 5px 10px;
+                    font-size: 11px;
+                }
+            }
         </style>
     </head>
     <body>
@@ -486,7 +642,7 @@ def generate_professional_ui(files_info, total_size):
             </div>
             
             <div class="config-panel">
-                <div style="font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 10px;">
+                <div style="font-size: 14px; font-weight: 600; color: #ffffff; margin-bottom: 10px;">
                     ⚙️ Server Configuration
                 </div>
                 <div class="config-grid">
