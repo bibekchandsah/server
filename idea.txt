@@ -1,0 +1,44 @@
+ 
+git init
+git add .
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/bibekchandsah/server.git
+git push -u origin main
+
+git remote add origin https://github.com/bibekchandsah/server.git
+git branch -M main
+git push -u origin main
+
+ipconfig | findstr "IPv4"
+Stop-Process -Name cloudflared -Force
+
+# Download: https://github.com/cloudflare/cloudflared/releases
+winget install --id Cloudflare.cloudflared
+Get-ChildItem -Path "C:\Program Files*" -Recurse -Filter "cloudflared.exe" -ErrorAction SilentlyContinue | Select-Object FullName
+
+python server_fast.py
+.\cloudflared.exe tunnel --url http://localhost:8000
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://localhost:8000 --protocol h2mux
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://localhost:8000 --protocol http2
+
+Speed Comparison Summary:
+----------------------------------------------------------
+Method	            Speed	        Setup	Notes
+Ngrok               (ngrok free)    Easy	1 Mbps
+Ngrok Pro	        10-50 Mbps	    Easy	$8/month
+Cloudflare Tunnel	50-100 Mbps	    Easy	Free!
+
+
+
+user choice directory (path)
+user choice port (default)
+speed is maximum
+chunnk size in MB is 8
+buffer in MB is 4
+maximum file size limit is 16GB
+enable resume downloads
+enable threading or multiple user and file download handling
+enable cache for 1 hour
+UI style is professional with file details
+
