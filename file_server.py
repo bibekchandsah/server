@@ -631,6 +631,18 @@ def display_startup_info():
     print("-" * 80)
     print()
 
+def display_clarified_urls():
+    """Display clarified URLs after Flask starts"""
+    time.sleep(1.5)  # Wait for Flask to print its messages
+    local_ip = get_local_ip()
+    
+    print()
+    print("📡 ACCESS YOUR FILES:")
+    print(f"   • http://127.0.0.1:{ServerConfig.PORT} (for this pc)")
+    if local_ip != "Unable to detect":
+        print(f"   • http://{local_ip}:{ServerConfig.PORT} (for same wifi pc)")
+    print()
+
 def main():
     """Main entry point"""
     try:
@@ -643,6 +655,11 @@ def main():
         # STEP 3: Start server
         print("🚀 Starting high-performance file server...")
         print()
+        
+        # Start a thread to display clarified URLs after Flask starts
+        import threading
+        url_thread = threading.Thread(target=display_clarified_urls, daemon=True)
+        url_thread.start()
         
         # Start Flask server
         app.run(
