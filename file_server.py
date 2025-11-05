@@ -12,6 +12,8 @@ import sys
 import time
 import socket
 import mimetypes
+import subprocess
+import re
 from flask import Flask, Response, request, render_template_string
 from werkzeug.serving import WSGIRequestHandler
 
@@ -48,6 +50,10 @@ class ServerConfig:
     PORT = 8000
     HOST = '0.0.0.0'
     DEBUG_MODE = False
+    
+    # Cloudflare Tunnel
+    CLOUDFLARE_URL = None
+    CLOUDFLARE_PROCESS = None
 
 # Get user input for configuration
 def get_user_configuration():
@@ -797,7 +803,109 @@ def display_clarified_urls():
     print(f"   • http://127.0.0.1:{ServerConfig.PORT} (for this pc)")
     if local_ip != "Unable to detect":
         print(f"   • http://{local_ip}:{ServerConfig.PORT} (for same wifi pc)")
+    
+    # Wait a bit more for Cloudflare URL to be captured
+    if not ServerConfig.CLOUDFLARE_URL:
+        time.sleep(2)
+    
+    # Display Cloudflare URL if available
+    if ServerConfig.CLOUDFLARE_URL:
+        print(f"   • {ServerConfig.CLOUDFLARE_URL} (for global share)")
+    
     print()
+
+def find_cloudflared():
+    """Find cloudflared.exe on the system"""
+    # Common installation paths
+    possible_paths = [
+        r"C:\Program Files\cloudflared\cloudflared.exe",
+        r"C:\Program Files (x86)\cloudflared\cloudflared.exe",
+        os.path.join(os.getcwd(), "cloudflared.exe"),
+        "cloudflared.exe",  # Check if it's in PATH
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    
+    # Try to find it using 'where' command
+    try:
+        result = subprocess.run(['where', 'cloudflared'], 
+                              capture_output=True, 
+                              text=True, 
+                              timeout=5)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().split('\n')[0]
+    except:
+        pass
+    
+    return None
+
+def start_cloudflare_tunnel():
+    """Start Cloudflare Tunnel in background and capture the URL"""
+    cloudflared_path = find_cloudflared()
+    
+    if not cloudflared_path:
+        print("⚠️  Cloudflare Tunnel: cloudflared.exe not found")
+        print("   Download from: https://github.com/cloudflare/cloudflared/releases")
+        print("   Or install with: winget install --id Cloudflare.cloudflared")
+        return
+    
+    try:
+        print("🌐 Starting Cloudflare Tunnel...")
+        
+        # Start cloudflared process
+        process = subprocess.Popen(
+            [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+        )
+        
+        ServerConfig.CLOUDFLARE_PROCESS = process
+        
+        # Read output to find the URL
+        import threading
+        
+        def read_tunnel_output():
+            url_pattern = re.compile(r'https://[a-z0-9-]+\.trycloudflare\.com')
+            for line in process.stdout:
+                match = url_pattern.search(line)
+                if match:
+                    ServerConfig.CLOUDFLARE_URL = match.group(0)
+                    print(f"✅ Cloudflare Tunnel active: {ServerConfig.CLOUDFLARE_URL} (for global share)")
+                    
+                    # Try to copy to clipboard
+                    try:
+                        subprocess.run(['clip'], input=ServerConfig.CLOUDFLARE_URL, 
+                                     text=True, check=True, timeout=2)
+                        print("📋 URL copied to clipboard!")
+                    except:
+                        pass
+                    break
+        
+        tunnel_thread = threading.Thread(target=read_tunnel_output, daemon=True)
+        tunnel_thread.start()
+        
+        # Wait a bit for tunnel to start
+        time.sleep(2)
+        
+    except Exception as e:
+        print(f"⚠️  Failed to start Cloudflare Tunnel: {e}")
+
+def stop_cloudflare_tunnel():
+    """Stop Cloudflare Tunnel process"""
+    if ServerConfig.CLOUDFLARE_PROCESS:
+        try:
+            ServerConfig.CLOUDFLARE_PROCESS.terminate()
+            ServerConfig.CLOUDFLARE_PROCESS.wait(timeout=5)
+        except:
+            try:
+                ServerConfig.CLOUDFLARE_PROCESS.kill()
+            except:
+                pass
 
 def main():
     """Main entry point"""
@@ -808,7 +916,10 @@ def main():
         # STEP 2: Display configuration
         display_startup_info()
         
-        # STEP 3: Start server
+        # STEP 3: Start Cloudflare Tunnel
+        start_cloudflare_tunnel()
+        
+        # STEP 4: Start server
         print("🚀 Starting high-performance file server...")
         print()
         
@@ -828,9 +939,11 @@ def main():
         
     except KeyboardInterrupt:
         print("\n\n🛑 Server stopped by user")
+        stop_cloudflare_tunnel()
         print("Thank you for using High-Performance File Server!")
     except Exception as e:
         print(f"\n❌ Server error: {e}")
+        stop_cloudflare_tunnel()
         sys.exit(1)
 
 if __name__ == "__main__":

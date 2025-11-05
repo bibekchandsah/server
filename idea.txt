@@ -31,6 +31,8 @@ Cloudflare Tunnel	50-100 Mbps	    Easy	Free!
 
 
 
+cloudflared.exe tunnel --protocol http2 --url http://10.5.234.63:8000
+cloudflared.exe tunnel --protocol http2 --url http://localhost:8000
 user choice directory (path)
 user choice port (default = 8000)
 speed is maximum
@@ -91,3 +93,11 @@ WARNING: This is a development server. Do not use it in a production deployment.
  * Running on all addresses (0.0.0.0)
  * Running on http://127.0.0.1:8000 (for this pc)
  * Running on http://10.5.234.63:8000 (for same wifi pc)
+ * Running on https://delicious-characters-karen-validity.trycloudflare.com/ (for global share)
+
+
+
+  pyinstaller --onefile --name "HighPerformanceFileServer" --icon=favicon.ico--clean --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module tkinter --exclude-module matplotlib --exclude-module numpy --exclude-module IPython --exclude-module kivy --exclude-module kivymd --exclude-module pygame file_server.py
+
+  pyinstaller --onefile --name "HighPerformanceFileServer" --clean --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module tkinter --exclude-module matplotlib --exclude-module numpy --exclude-module IPython --exclude-module kivy --exclude-module kivymd --exclude-module pygame file_server.py 
+
