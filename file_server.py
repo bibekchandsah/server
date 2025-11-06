@@ -847,7 +847,7 @@ def find_cloudflared():
     return None
 
 def start_cloudflare_tunnel():
-    """Start Cloudflare Tunnel in a separate window for maximum speed"""
+    """Start Cloudflare Tunnel and capture URL for display"""
     cloudflared_path = find_cloudflared()
     
     if not cloudflared_path:
@@ -859,42 +859,39 @@ def start_cloudflare_tunnel():
     try:
         print("🌐 Starting Cloudflare Tunnel...")
         
-        # Start cloudflared with output capture but in a way that doesn't block performance
-        # Use PIPE but read asynchronously
+        # Start cloudflared with hidden window and captured output
+        startupinfo = None
         if sys.platform == 'win32':
-            process = subprocess.Popen(
-                [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.DEVNULL,
-                text=True,
-                bufsize=0,  # Unbuffered
-                creationflags=subprocess.CREATE_NEW_CONSOLE
-            )
-        else:
-            process = subprocess.Popen(
-                [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=0
-            )
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+        
+        process = subprocess.Popen(
+            [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            bufsize=0,  # Unbuffered for immediate output
+            startupinfo=startupinfo,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+        )
         
         ServerConfig.CLOUDFLARE_PROCESS = process
         
-        # Read output asynchronously to capture URL without blocking
+        # Read output asynchronously to capture URL without blocking tunnel performance
         import threading
         
         def read_tunnel_output():
             url_pattern = re.compile(r'https://[a-z0-9-]+\.trycloudflare\.com')
             try:
-                # Read only the first few lines to get the URL, then stop reading
+                # Read only the first few lines to get the URL, then stop reading to avoid blocking
                 lines_read = 0
                 max_lines = 50  # Only read first 50 lines
                 
                 for line in process.stdout:
                     if lines_read >= max_lines or ServerConfig.CLOUDFLARE_URL:
-                        # Stop reading after getting URL to avoid blocking
+                        # Stop reading after getting URL to maintain maximum performance
                         break
                     
                     match = url_pattern.search(line)
