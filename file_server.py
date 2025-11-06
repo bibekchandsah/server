@@ -804,13 +804,18 @@ def display_clarified_urls():
     if local_ip != "Unable to detect":
         print(f"   • http://{local_ip}:{ServerConfig.PORT} (for same wifi pc)")
     
-    # Wait a bit more for Cloudflare URL to be captured
-    if not ServerConfig.CLOUDFLARE_URL:
-        time.sleep(2)
+    # Wait for Cloudflare URL to be captured (up to 10 seconds)
+    wait_time = 0
+    max_wait = 10
+    while not ServerConfig.CLOUDFLARE_URL and wait_time < max_wait:
+        time.sleep(0.5)
+        wait_time += 0.5
     
     # Display Cloudflare URL if available
     if ServerConfig.CLOUDFLARE_URL:
         print(f"   • {ServerConfig.CLOUDFLARE_URL} (for global share)")
+    else:
+        print("   • Cloudflare Tunnel starting... (check separate window for URL)")
     
     print()
 
@@ -842,7 +847,7 @@ def find_cloudflared():
     return None
 
 def start_cloudflare_tunnel():
-    """Start Cloudflare Tunnel in background and capture the URL"""
+    """Start Cloudflare Tunnel in a separate window for maximum speed"""
     cloudflared_path = find_cloudflared()
     
     if not cloudflared_path:
@@ -854,61 +859,64 @@ def start_cloudflare_tunnel():
     try:
         print("🌐 Starting Cloudflare Tunnel...")
         
-        # Create a temporary file to capture the URL
-        import tempfile
-        temp_log = tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.log')
-        temp_log_path = temp_log.name
-        temp_log.close()
-        
-        # Start cloudflared process - redirect output to file to avoid blocking
-        # Use stderr redirection to capture URL without blocking the tunnel
-        log_file = open(temp_log_path, 'w')
-        process = subprocess.Popen(
-            [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
-        )
+        # Start cloudflared with output capture but in a way that doesn't block performance
+        # Use PIPE but read asynchronously
+        if sys.platform == 'win32':
+            process = subprocess.Popen(
+                [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                text=True,
+                bufsize=0,  # Unbuffered
+                creationflags=subprocess.CREATE_NEW_CONSOLE
+            )
+        else:
+            process = subprocess.Popen(
+                [cloudflared_path, 'tunnel', '--protocol', 'http2', '--url', f'http://localhost:{ServerConfig.PORT}'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=0
+            )
         
         ServerConfig.CLOUDFLARE_PROCESS = process
         
-        # Read output from file to find the URL without blocking the tunnel
+        # Read output asynchronously to capture URL without blocking
         import threading
         
         def read_tunnel_output():
             url_pattern = re.compile(r'https://[a-z0-9-]+\.trycloudflare\.com')
-            max_attempts = 30  # Try for 30 seconds
-            attempt = 0
-            
-            while attempt < max_attempts and not ServerConfig.CLOUDFLARE_URL:
-                try:
-                    time.sleep(1)
-                    with open(temp_log_path, 'r') as f:
-                        content = f.read()
-                        match = url_pattern.search(content)
-                        if match:
-                            ServerConfig.CLOUDFLARE_URL = match.group(0)
-                            print(f"✅ Cloudflare Tunnel active: {ServerConfig.CLOUDFLARE_URL}")
-                            
-                            # Try to copy to clipboard
-                            try:
-                                subprocess.run(['clip'], input=ServerConfig.CLOUDFLARE_URL, 
-                                             text=True, check=True, timeout=2)
-                                print("📋 URL copied to clipboard!")
-                            except:
-                                pass
-                            break
-                except:
-                    pass
-                attempt += 1
-            
-            # Clean up temp file after a delay
-            time.sleep(5)
             try:
-                log_file.close()
-                os.unlink(temp_log_path)
-            except:
-                pass
+                # Read only the first few lines to get the URL, then stop reading
+                lines_read = 0
+                max_lines = 50  # Only read first 50 lines
+                
+                for line in process.stdout:
+                    if lines_read >= max_lines or ServerConfig.CLOUDFLARE_URL:
+                        # Stop reading after getting URL to avoid blocking
+                        break
+                    
+                    match = url_pattern.search(line)
+                    if match:
+                        ServerConfig.CLOUDFLARE_URL = match.group(0)
+                        time.sleep(0.5)  # Small delay before printing
+                        print(f"\n✅ Cloudflare Tunnel active: {ServerConfig.CLOUDFLARE_URL}")
+                        
+                        # Try to copy to clipboard
+                        try:
+                            subprocess.run(['clip'], input=ServerConfig.CLOUDFLARE_URL, 
+                                         text=True, check=True, timeout=2)
+                            print("📋 URL copied to clipboard!")
+                        except:
+                            pass
+                        break
+                    
+                    lines_read += 1
+                    
+            except Exception as e:
+                if ServerConfig.DEBUG_MODE:
+                    print(f"⚠️  Tunnel output read error: {e}")
         
         tunnel_thread = threading.Thread(target=read_tunnel_output, daemon=True)
         tunnel_thread.start()
