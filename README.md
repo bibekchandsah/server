@@ -4,7 +4,21 @@
 
 ---
 
-## 📥 What You Need
+## 📥 Download & Install
+
+### Option 1: Download Executable (No Python Required!)
+**Just download and run - everything is included!**
+
+**[📦 Download HighPerformanceFileServer.exe](https://github.com/bibekchandsah/server/releases)**
+
+✅ No Python installation needed  
+✅ No dependencies to install  
+✅ Cloudflare Tunnel built-in  
+✅ Just double-click and run!
+
+### Option 2: Run Python Script
+
+## 📋 What You Need
 
 1. **Python** (3.6 or higher)
 2. **Flask** - Install with: `pip install flask`
