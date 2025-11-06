@@ -5,7 +5,7 @@ a = Analysis(
     ['file_server.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('D:\\server\\cloudflared.exe', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['D:\\server\\icon.ico'],
 )

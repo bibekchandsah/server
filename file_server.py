@@ -60,7 +60,7 @@ def get_user_configuration():
     """Prompt user for directory and port configuration"""
     
     print("=" * 80)
-    print("🚀 HIGH-PERFORMANCE FILE SERVER")
+    print("🚀 HIGH-PERFORMANCE FILE SERVER                          𝓓𝓮𝓿𝓮𝓵𝓸𝓹𝓮𝓭 𝓫𝔂 𝓑𝓲𝓫𝓮𝓴.....")
     print("=" * 80)
     print()
     
@@ -820,12 +820,22 @@ def display_clarified_urls():
     print()
 
 def find_cloudflared():
-    """Find cloudflared.exe on the system"""
+    """Find cloudflared.exe on the system or in bundled resources"""
+    
+    # Check if running as PyInstaller bundle
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        bundle_dir = sys._MEIPASS
+        bundled_cloudflared = os.path.join(bundle_dir, "cloudflared.exe")
+        if os.path.exists(bundled_cloudflared):
+            return bundled_cloudflared
+    
     # Common installation paths
     possible_paths = [
+        os.path.join(os.getcwd(), "cloudflared.exe"),  # Current directory (for dev)
         r"C:\Program Files\cloudflared\cloudflared.exe",
         r"C:\Program Files (x86)\cloudflared\cloudflared.exe",
-        os.path.join(os.getcwd(), "cloudflared.exe"),
         "cloudflared.exe",  # Check if it's in PATH
     ]
     
