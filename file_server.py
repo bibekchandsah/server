@@ -14,6 +14,8 @@ import socket
 import mimetypes
 import subprocess
 import re
+import atexit
+import math
 from flask import Flask, Response, request, render_template_string
 from werkzeug.serving import WSGIRequestHandler
 
@@ -148,7 +150,6 @@ def format_size(size_bytes):
         return "0 B"
     
     size_names = ["B", "KB", "MB", "GB", "TB"]
-    import math
     i = int(math.floor(math.log(size_bytes, 1024)))
     p = math.pow(1024, i)
     s = round(size_bytes / p, 2)
@@ -865,6 +866,10 @@ def start_cloudflare_tunnel():
         print("   Download from: https://github.com/cloudflare/cloudflared/releases")
         print("   Or install with: winget install --id Cloudflare.cloudflared")
         return
+
+    # Kill any existing cloudflared processes first
+    print("🔄 Checking for existing Cloudflare tunnels...")
+    kill_existing_cloudflared_processes()
     
     try:
         print("🌐 Starting Cloudflare Tunnel...")
@@ -943,19 +948,57 @@ def stop_cloudflare_tunnel():
             except:
                 pass
 
+def kill_existing_cloudflared_processes():
+    """Kill any existing cloudflared processes to prevent multiple tunnels"""
+    try:
+        if sys.platform == 'win32':
+            # Use taskkill on Windows to terminate any existing cloudflared processes
+            result = subprocess.run(['taskkill', '/F', '/IM', 'cloudflared.exe'], 
+                         capture_output=True, text=True, timeout=10)
+            # Also kill any processes listening on the port we want to use
+            try:
+                subprocess.run(['netstat', '-ano'], capture_output=True, text=True, timeout=5)
+            except:
+                pass
+        else:
+            # Use pkill on Unix-like systems
+            subprocess.run(['pkill', '-f', 'cloudflared'], 
+                         capture_output=True, text=True, timeout=10)
+        
+        # Wait a moment for processes to fully terminate
+        time.sleep(2)
+        
+    except Exception as e:
+        if ServerConfig.DEBUG_MODE:
+            print(f"⚠️  Note: Could not check for existing cloudflared processes: {e}")
+        pass
+
+def cleanup_on_exit():
+    """Enhanced cleanup function for application exit"""
+    try:
+        # Stop current process if it exists
+        stop_cloudflare_tunnel()
+        # Kill any remaining cloudflared processes
+        kill_existing_cloudflared_processes()
+    except:
+        pass
+
 def main():
     """Main entry point"""
     try:
-        # STEP 1: Get user configuration FIRST
+        # STEP 1: Clean up any existing cloudflared processes first
+        kill_existing_cloudflared_processes()
+        
+        # STEP 2: Get user configuration
         get_user_configuration()
         
-        # STEP 2: Display configuration
+        # STEP 3: Display configuration
         display_startup_info()
         
-        # STEP 3: Start Cloudflare Tunnel
+        # STEP 4: Start Cloudflare Tunnel
         start_cloudflare_tunnel()
         
-        # STEP 4: Start server
+        # STEP 5: Start server
         print("🚀 Starting high-performance file server...")
         print()
         
@@ -975,14 +1018,17 @@ def main():
         
     except KeyboardInterrupt:
         print("\n\n🛑 Server stopped by user")
-        stop_cloudflare_tunnel()
+        cleanup_on_exit()
         print("Thank you for using High-Performance File Server!")
     except Exception as e:
         print(f"\n❌ Server error: {e}")
-        stop_cloudflare_tunnel()
+        cleanup_on_exit()
         sys.exit(1)
 
 if __name__ == "__main__":
+    # Register cleanup function to run on exit
+    atexit.register(cleanup_on_exit)
+    
     # Check Flask installation
     try:
         import flask
